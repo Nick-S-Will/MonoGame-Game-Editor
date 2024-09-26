@@ -1,3 +1,10 @@
-﻿
-using var game = new Editor.Game1();
-game.Run();
+﻿using Editor.Editor;
+using System.Threading;
+
+Thread.CurrentThread.SetApartmentState(ApartmentState.Unknown);
+Thread.CurrentThread.SetApartmentState(ApartmentState.STA);
+
+FormEditor editor = new();
+editor.GameEditor = new GameEditor(editor);
+editor.Show();
+editor.GameEditor.Run();
