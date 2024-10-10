@@ -16,13 +16,16 @@ internal class Project : ISerializable
 
 	public Project() { }
 
-	public Project(ContentManager contentManager, string name)
+	public Project(ContentManager contentManager)
 	{
-		Folder = Path.GetDirectoryName(name);
-		Name = Path.GetFileName(name);
-		if (!Name.ToLower().EndsWith(FileExtension)) Name += FileExtension;
-
 		AddLevel(contentManager);
+	}
+
+	public void SetPath(string path)
+	{
+		Folder = Path.GetDirectoryName(path);
+		Name = Path.GetFileName(path);
+		if (!Name.ToLower().EndsWith(FileExtension)) Name += FileExtension;
 	}
 
 	private void AddLevel(ContentManager contentManager)
@@ -30,6 +33,11 @@ internal class Project : ISerializable
 		CurrentLevel = new();
 		CurrentLevel.LoadContent(contentManager);
 		Levels.Add(CurrentLevel);
+	}
+
+	public void Update(float delta)
+	{
+		CurrentLevel?.Update(delta);
 	}
 
 	public void Render()

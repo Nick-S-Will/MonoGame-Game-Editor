@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Editor.Engine;
+using System;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -7,11 +8,34 @@ namespace Editor.Editor;
 
 public partial class FormEditor : Form
 {
-	public GameEditor GameEditor { get; set; }
+	private GameEditor gameEditor;
+
+	public GameEditor GameEditor 
+	{ 
+		get => gameEditor;
+		set
+		{
+			gameEditor = value;
+			AddGameEditorEventListeners();
+		}
+	}
 
 	public FormEditor()
 	{
 		InitializeComponent();
+		KeyPreview = true;
+
+		KeyDown += InputController.HandlePressEvent;
+		KeyUp += InputController.HandleReleaseEvent;
+	}
+
+	private void AddGameEditorEventListeners()
+	{
+		Form gameForm = FromHandle(gameEditor.Window.Handle) as Form;
+		gameForm.MouseMove += InputController.HandleMouseEvent;
+		gameForm.MouseDown += InputController.HandlePressEvent;
+		gameForm.MouseUp += InputController.HandleReleaseEvent;
+		gameForm.MouseWheel += InputController.HandleMouseEvent;
 	}
 
 	private void exitToolStripMenuItem_Click(object sender, EventArgs e)
@@ -34,7 +58,8 @@ public partial class FormEditor : Form
 		SaveFileDialog saveFileDialog = new();
 		if (saveFileDialog.ShowDialog() != DialogResult.OK) return;
 
-		GameEditor.Project = new(GameEditor.Content, saveFileDialog.FileName);
+		GameEditor.Project = new(GameEditor.Content);
+		GameEditor.Project.SetPath(saveFileDialog.FileName);
 		Text = "Our Cool Editor - " + GameEditor.Project.Name;
 		GameEditor.AdjustAspectRatio();
 		saveToolStripMenuItem_Click(sender, e);

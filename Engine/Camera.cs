@@ -1,5 +1,6 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.IO;
 
@@ -7,7 +8,9 @@ namespace Editor.Engine;
 
 internal class Camera : ISerializable
 {
+    public Viewport Viewport { get; set; }
     public Vector3 Position { get; set; } = Vector3.Zero;
+    public Vector3 Target { get; set; } = Vector3.Zero;
     public Matrix View { get; set; } = Matrix.Identity;
     public Matrix Projection { get; set; } = Matrix.Identity;
     public float NearPlaneDistance { get; set; } = .1f;
@@ -21,10 +24,35 @@ internal class Camera : ISerializable
         Update(position, aspectRatio);
     }
 
+    public void Translate(Vector3 translation)
+    {
+        if (translation == Vector3.Zero) return;
+
+        float distance = Vector3.Distance(Position, Target);
+        Vector3 forward = Vector3.Normalize(Target - Position);
+        Vector3 left = Vector3.Normalize(Vector3.Cross(forward, Vector3.Up));
+        Vector3 up = Vector3.Normalize(Vector3.Cross(left, forward));
+        Position += left * translation.X * distance;
+        Position += up * translation.Y * distance;
+        Position += forward * translation.Z * 100f;
+        Target += left * translation.X * distance;
+        Target += up * translation.Y * distance;
+
+        Update(Position, AspectRatio);
+    }
+
+    public void Rotate(Vector3 rotation)
+    {
+        Position = Vector3.Transform(Position - Target, Matrix.CreateRotationY(rotation.Y));
+        Position += Target;
+
+        Update(Position, AspectRatio);
+    }
+
     public void Update(Vector3 position, float aspectRatio)
     {
         Position = position;
-        View = Matrix.CreateLookAt(Position, Vector3.Zero, Vector3.Up);
+        View = Matrix.CreateLookAt(Position, Target, Vector3.Up);
         Projection = Matrix.CreatePerspectiveFieldOfView(MathF.PI / 4f, aspectRatio, NearPlaneDistance, FarPlaneDistance);
         AspectRatio = aspectRatio;
     }
@@ -45,4 +73,9 @@ internal class Camera : ISerializable
         AspectRatio = binaryReader.ReadSingle();
         Update(Position, AspectRatio);
     }
+
+	public override string ToString()
+	{
+        return "Camera Position: " + Position.ToString();
+	}
 }
