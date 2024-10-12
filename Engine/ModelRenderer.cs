@@ -65,10 +65,6 @@ internal class ModelRenderer : ISerializable
 
 	public void Render(Matrix view, Matrix projection)
 	{
-		Position.X += .001f;
-		EulerAngles.Y += .005f;
-
-		Effect.Parameters["World"]?.SetValue(Transform);
 		Effect.Parameters["WorldViewProjection"].SetValue(Transform * view * projection);
 		Effect.Parameters["Texture"].SetValue(Texture);
 		Effect.Parameters["Tint"].SetValue(new Vector4(Tint.R / 255f, Tint.G / 255f, Tint.B / 255f, 1f));
