@@ -5,7 +5,7 @@ using Microsoft.Xna.Framework.Content;
 
 namespace Editor.Engine;
 
-internal class ModelRenderer : ISerializable
+internal class ModelRenderer : ISerializable, ISelectable
 {
 	public Model Model { get; set; }
 	public Texture Texture { get; set; }
@@ -24,9 +24,9 @@ internal class ModelRenderer : ISerializable
 			}
 		}
 	}
-	public Matrix Transform => Matrix.CreateScale(Scale) * Matrix.CreateFromYawPitchRoll(EulerAngles.Y, EulerAngles.X, EulerAngles.Z) * Matrix.CreateTranslation(Position);
-	public Vector3 Position = Vector3.Zero, EulerAngles = Vector3.Zero;
-	public Color Tint { get; set; } = Color.White;
+	public Vector3 Position { get; set; }
+	public Vector3 EulerAngles { get; set; }
+	public Color Tint { get; set; } = Color.Black;
 	public float Scale { get; set; } = 1f;
 
 	private Effect effect;
@@ -50,24 +50,11 @@ internal class ModelRenderer : ISerializable
 		Scale = scale;
 	}
 
-	public void Translate(Vector3 translation, Camera camera)
+    public void Render(Matrix view, Matrix projection)
 	{
-		if (translation == Vector3.Zero) return;
-
-		float distance = Vector3.Distance(Position, camera.Target);
-		Vector3 forward = Vector3.Normalize(camera.Target - Position);
-		Vector3 left = Vector3.Normalize(Vector3.Cross(forward, Vector3.Up));
-		Vector3 up = Vector3.Normalize(Vector3.Cross(left, forward));
-		Position += left * translation.X * distance;
-		Position += up * translation.Y * distance;
-		Position += forward * translation.Z * 100f;
-	}
-
-	public void Render(Matrix view, Matrix projection)
-	{
-		Effect.Parameters["WorldViewProjection"].SetValue(Transform * view * projection);
+		Effect.Parameters["WorldViewProjection"].SetValue(((ISelectable)this).Transform * view * projection);
 		Effect.Parameters["Texture"].SetValue(Texture);
-		Effect.Parameters["Tint"].SetValue(new Vector4(Tint.R / 255f, Tint.G / 255f, Tint.B / 255f, 1f));
+		Effect.Parameters["Tint"].SetValue(new Vector3(Tint.R / 255f, Tint.G / 255f, Tint.B / 255f));
 
 		foreach (var mesh in Model.Meshes) mesh.Draw();
 	}

@@ -1,5 +1,7 @@
 ﻿using Editor.Engine;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -9,31 +11,53 @@ internal class Project : ISerializable
 {
 	private const string FileExtension = ".oce";
 
-	public Level CurrentLevel { get; set; } = null;
-	public List<Level> Levels { get; set; } = new();
-	public string Folder { get; set; } = string.Empty;
-	public string Name { get; set; } = string.Empty;
+	public event Action OnAssetsUpdated;
 
-	public Project() { }
+	public Level CurrentLevel { get; private set; }
+	public List<Level> Levels { get; private set; } = new();
+	public string Folder { get; private set; } = string.Empty;
+	public string Name { get; private set; } = string.Empty;
+	public AssetMonitor AssetMonitor { get; private set; }
+	public string ContentFolder => string.IsNullOrEmpty(Folder) ? string.Empty : Path.Combine(Folder, "Content");
+    public string AssetFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "bin");
+    public string ObjectFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "obj");
+	public string ContentPath => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "Content.mgcb");
 
-	public Project(ContentManager contentManager)
+    public Project() { }
+
+	public Project(ContentManager contentManager, GraphicsDevice graphicsDevice)
 	{
-		AddLevel(contentManager);
-	}
+		AddLevel(contentManager, graphicsDevice);
+    }
 
-	public void SetPath(string path)
+    private void AddLevel(ContentManager contentManager, GraphicsDevice graphicsDevice)
+    {
+        CurrentLevel = new();
+        CurrentLevel.LoadContent(contentManager, graphicsDevice);
+        Levels.Add(CurrentLevel);
+    }
+
+    public void SetPath(string path)
 	{
 		Folder = Path.GetDirectoryName(path);
 		Name = Path.GetFileName(path);
 		if (!Name.ToLower().EndsWith(FileExtension)) Name += FileExtension;
+
+		if (!Directory.Exists(ContentFolder))
+		{
+			Directory.CreateDirectory(ContentFolder);
+			Directory.CreateDirectory(AssetFolder);
+			Directory.CreateDirectory(ObjectFolder);
+			File.Copy("ContentTemplate.mgcb", ContentPath);
+		}
+		AssetMonitor = new(ObjectFolder);
+        AssetMonitor.OnAssetsUpdated += UpdateAssets;
 	}
 
-	private void AddLevel(ContentManager contentManager)
-	{
-		CurrentLevel = new();
-		CurrentLevel.LoadContent(contentManager);
-		Levels.Add(CurrentLevel);
-	}
+    private void UpdateAssets()
+    {
+		OnAssetsUpdated?.Invoke();
+    }
 
 	public void Update(float delta)
 	{
@@ -42,7 +66,7 @@ internal class Project : ISerializable
 
 	public void Render()
 	{
-		CurrentLevel.Renderer();
+		CurrentLevel.Render();
 	}
 
 	public void Serialize(BinaryWriter binaryWriter)

@@ -70,19 +70,6 @@ internal class InputController
 	}
 	#endregion
 
-	public static Ray GetMousePositionRay(Camera camera)
-	{
-		Vector3 nearPoint = new(MousePosition, 0f);
-		Vector3 farPoint = new(MousePosition, 1f);
-
-		nearPoint = camera.Viewport.Unproject(nearPoint, camera.Projection, camera.View, Matrix.Identity);
-		farPoint = camera.Viewport.Unproject(farPoint, camera.Projection, camera.View, Matrix.Identity);
-
-		Vector3 direction = Vector3.Normalize(farPoint - nearPoint);
-
-		return new Ray(nearPoint, direction);
-	}
-
 	public static void Clear()
 	{
 		LastMousePosition = MousePosition;

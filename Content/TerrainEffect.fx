@@ -8,40 +8,50 @@
 #endif
 
 matrix WorldViewProjection;
+float3 LightDirection = float3(1, 1, 0);
+float TextureTiling = 1;
 float3 Tint;
 
-texture Texture;
-sampler BasicTextureSampler = sampler_state
+texture2D BaseTexture;
+sampler2D BaseTextureSampler = sampler_state
 {
-	texture = <Texture>;
+    Texture = <BaseTexture>;
+    AddressU = Wrap;
+    AddressV = Wrap;
+    MinFilter = Anisotropic;
+    MagFilter = Anisotropic;
 };
 
 struct VertexShaderInput
 {
 	float4 Position : POSITION0;
-	float2 UV : TEXCOORD0;
+    float2 UV : TEXCOORD0;
+    float3 Normal : NORMAL0;
 };
 
 struct VertexShaderOutput
 {
 	float4 Position : SV_POSITION;
-	float2 UV : TEXCOORD0;
+    float2 UV : TEXTCOORD0;
+    float3 Normal : NORMAL0;
 };
 
 VertexShaderOutput MainVS(in VertexShaderInput input)
 {
-	VertexShaderOutput output = (VertexShaderOutput)0;
-
+    VertexShaderOutput output;
 	output.Position = mul(input.Position, WorldViewProjection);
-	output.UV = input.UV;
+    output.Normal = normalize(input.Normal);
+    output.UV = input.UV;
 
 	return output;
 }
 
 float4 MainPS(VertexShaderOutput input) : COLOR
 {
-	float4 color = tex2D(BasicTextureSampler, input.UV);
-	return max(float4(Tint, 1.f), color);
+	float light = saturate(dot(normalize(LightDirection), input.Normal) + 0.1f);
+    float3 tex = tex2D(BaseTextureSampler, input.UV * TextureTiling);
+    
+	return float4(light * max(Tint, tex), 1.f);
 }
 
 technique BasicColorDrawing

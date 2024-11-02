@@ -10,11 +10,14 @@ internal class Camera : ISerializable
 {
     public Viewport Viewport { get; set; }
     public Vector3 Position { get; set; } = Vector3.Zero;
-    public Vector3 Target { get; set; } = Vector3.Zero;
+    public Vector3 Target { get; set; } = new(250f, 0f, 250f);
+    public Vector3 Right => Vector3.Cross(Vector3.Up, Forward);
+    public Vector3 Up => Vector3.Cross(Forward, Right);
+    public Vector3 Forward => Vector3.Normalize(Target - Position);
     public Matrix View { get; set; } = Matrix.Identity;
     public Matrix Projection { get; set; } = Matrix.Identity;
     public float NearPlaneDistance { get; set; } = .1f;
-    public float FarPlaneDistance { get; set; } = 1000f;
+    public float FarPlaneDistance { get; set; } = 10000f;
     public float AspectRatio { get; set; } = 16f / 9f;
 
     public Camera() { }
@@ -22,6 +25,14 @@ internal class Camera : ISerializable
     public Camera(Vector3 position, float aspectRatio)
     {
         Update(position, aspectRatio);
+    }
+
+    public void Update(Vector3 position, float aspectRatio)
+    {
+        Position = position;
+        View = Matrix.CreateLookAt(Position, Target, Vector3.Up);
+        Projection = Matrix.CreatePerspectiveFieldOfView(MathF.PI / 4f, aspectRatio, NearPlaneDistance, FarPlaneDistance);
+        AspectRatio = aspectRatio;
     }
 
     public void Translate(Vector3 translation)
@@ -49,12 +60,17 @@ internal class Camera : ISerializable
         Update(Position, AspectRatio);
     }
 
-    public void Update(Vector3 position, float aspectRatio)
+    public Ray GetRayFromScreenPosition(Vector2 mousePosition)
     {
-        Position = position;
-        View = Matrix.CreateLookAt(Position, Target, Vector3.Up);
-        Projection = Matrix.CreatePerspectiveFieldOfView(MathF.PI / 4f, aspectRatio, NearPlaneDistance, FarPlaneDistance);
-        AspectRatio = aspectRatio;
+        Vector3 nearPoint = new(mousePosition, 0f);
+        Vector3 farPoint = new(mousePosition, 1f);
+
+        nearPoint = Viewport.Unproject(nearPoint, Projection, View, Matrix.Identity);
+        farPoint = Viewport.Unproject(farPoint, Projection, View, Matrix.Identity);
+
+        Vector3 direction = Vector3.Normalize(farPoint - nearPoint);
+
+        return new Ray(nearPoint, direction);
     }
 
     public void Serialize(BinaryWriter binaryWriter)

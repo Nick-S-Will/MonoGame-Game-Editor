@@ -1,17 +1,35 @@
 ﻿using Editor.Engine;
+using GUI.Editor;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Linq;
 using System.Windows.Forms;
 
 namespace Editor.Editor;
 
 public class GameEditor : Game
 {
-	private GraphicsDeviceManager graphics;
+	public event Action OnAssetsUpdated;
+
+	internal Project Project
+	{
+		get => project;
+		set
+		{
+			if (project == value) return;
+
+			project = value;
+			project.OnAssetsUpdated += OnAssetsUpdated;
+		}
+	}
+
+    private GraphicsDeviceManager graphics;
 	private FormEditor parent;
 	private SpriteBatch spriteBatch;
 	private FontController fontController;
-	internal Project Project { get; set; }
+
+	private Project project;
 
 	public GameEditor()
 	{
@@ -34,9 +52,9 @@ public class GameEditor : Game
 	{
 		base.Initialize();
 
-		Project = new(Content);
+		Project = new(Content, GraphicsDevice);
 
-		RasterizerState rasterizerState = new() { CullMode = CullMode.None };
+        RasterizerState rasterizerState = new() { CullMode = CullMode.None };
 		GraphicsDevice.RasterizerState = rasterizerState;
 		DepthStencilState depthStencilState = new() { DepthBufferEnable = true };
 		GraphicsDevice.DepthStencilState = depthStencilState;
@@ -50,14 +68,17 @@ public class GameEditor : Game
 
 	protected override void Update(GameTime gameTime)
 	{
-		float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
+        Content.RootDirectory = Project.AssetFolder;
+
+        float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 		Project.Update(deltaTime);
 		InputController.Clear();
 
-		var selectedModels = Project.CurrentLevel.SelectedModelRenderers;
-		if (selectedModels.Length == 0) parent.propertyGrid.SelectedObject = null;
-		else if (selectedModels.Length == 1) parent.propertyGrid.SelectedObject = selectedModels[0];
-		else parent.propertyGrid.SelectedObjects = selectedModels;
+		var selectedObjects = Project.CurrentLevel.SelectedObjects;
+		if (!selectedObjects.SequenceEqual(parent.propertyGrid.SelectedObjects))
+		{
+			parent.propertyGrid.SelectedObjects = selectedObjects;
+		}
 
 		base.Update(gameTime);
 	}
