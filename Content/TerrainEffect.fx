@@ -12,10 +12,10 @@ float3 LightDirection = float3(1, 1, 0);
 float TextureTiling = 1;
 float3 Tint;
 
-texture2D BaseTexture;
+texture2D Texture;
 sampler2D BaseTextureSampler = sampler_state
 {
-    Texture = <BaseTexture>;
+    Texture = <Texture>;
     AddressU = Wrap;
     AddressV = Wrap;
     MinFilter = Anisotropic;

@@ -1,4 +1,5 @@
 ﻿using Editor.Engine;
+using Editor.GUI;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;

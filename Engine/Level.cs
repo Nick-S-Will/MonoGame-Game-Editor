@@ -14,17 +14,18 @@ internal class Level : ISerializable
     public Camera Camera => camera;
     public ISelectable[] SelectedObjects => selectedObjects.ToArray();
 
+    private readonly Light light = new() { Position = new(0, 400, -500), Color = new(.9f, .9f, .9f) };
+    private readonly Camera camera = new(new Vector3(20f, 290f, 600f), 16f / 9f);
     private readonly HashSet<ISelectable> selectedObjects = new();
     private readonly List<ModelRenderer> modelRenderers = new();
-    private readonly Camera camera = new(new Vector3(20f, 290f, 600f), 16f / 9f);
-
-    private Effect terrainEffect;
     private Terrain terrain;
 
     public void LoadContent(ContentManager contentManager, GraphicsDevice graphicsDevice)
     {
-        terrainEffect = contentManager.Load<Effect>("TerrainEffect");
-        terrain = new(graphicsDevice, contentManager.Load<Texture2D>("Grass"), contentManager.Load<Texture2D>("HeightMap"), 200f);
+        Renderer.Instance.Camera = camera;
+        Renderer.Instance.Light = light;
+
+        terrain = new(graphicsDevice, contentManager.Load<Texture2D>("Grass"), contentManager.Load<Effect>("TerrainEffect"), contentManager.Load<Texture2D>("HeightMap"), 200f);
     }
 
     public void AddModel(ModelRenderer teapot)
@@ -112,29 +113,42 @@ internal class Level : ISerializable
         if (!InputController.IsMouseButtonDown(MouseButtons.Left)) return;
 
         selectedObjects.Clear();
+        foreach (var renderer in modelRenderers) renderer.Tint = Color.Black;
+        terrain.Tint = Color.Black;
 
-        Ray mousePositionRay = camera.GetRayFromScreenPosition(InputController.MousePosition);
         Color selectionColor = Color.Red;
+        foreach (var selectable in GetMousePositionObjects(InputController.MousePosition))
+        {
+            selectable.Tint = selectionColor;
+            selectedObjects.Add(selectable);
+        }
+    }
+
+    public ISelectable[] GetMousePositionObjects(Vector2 mousePosition)
+    {
+        List<ISelectable> selectables = new();
+
+        Ray mousePositionRay = camera.GetRayFromScreenPosition(mousePosition);
         foreach (var modelRenderer in modelRenderers)
         {
             bool intersectingModel = mousePositionRay.IntersectsModelRenderer(modelRenderer).HasValue;
-            modelRenderer.Tint = intersectingModel ? selectionColor : Color.Black;
-            if (intersectingModel) selectedObjects.Add(modelRenderer);
+            if (intersectingModel) selectables.Add(modelRenderer);
         }
 
         bool intersectingTerrain = mousePositionRay.IntersectsTerrain(terrain).HasValue;
-        terrain.Tint = intersectingTerrain ? selectionColor : Color.Black;
-        if (intersectingTerrain) selectedObjects.Add(terrain);
+        if (intersectingTerrain) selectables.Add(terrain);
+
+        return selectables.ToArray();
     }
 
     public void Render()
     {
         foreach (var renderer in modelRenderers)
         {
-            renderer.Render(camera.View, camera.Projection);
+            Renderer.Instance.Render(renderer);
         }
 
-        terrain.Draw(terrainEffect, camera.View, camera.Projection, new Vector3(0f, -1f, 0f));
+        Renderer.Instance.Render(terrain);
     }
 
     public void Serialize(BinaryWriter binaryWriter)

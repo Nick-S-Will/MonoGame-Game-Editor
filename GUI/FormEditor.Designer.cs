@@ -144,7 +144,10 @@ partial class FormEditor
         // 
         // splitContainer.Panel1
         // 
+        splitContainer.Panel1.AllowDrop = true;
         splitContainer.Panel1.SizeChanged += splitContainer_Panel1_SizeChanged;
+        splitContainer.Panel1.DragDrop += splitContainer_Panel1_DragDrop;
+        splitContainer.Panel1.DragOver += splitContainer_Panel1_DragOver;
         // 
         // splitContainer.Panel2
         // 
@@ -188,6 +191,7 @@ partial class FormEditor
         assetListBox.Name = "assetListBox";
         assetListBox.Size = new System.Drawing.Size(302, 236);
         assetListBox.TabIndex = 0;
+        assetListBox.MouseDown += assetListBox_MouseDown;
         // 
         // FormEditor
         // 

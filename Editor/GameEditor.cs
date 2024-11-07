@@ -28,7 +28,6 @@ public class GameEditor : Game
 	private FormEditor parent;
 	private SpriteBatch spriteBatch;
 	private FontController fontController;
-
 	private Project project;
 
 	public GameEditor()
@@ -64,7 +63,7 @@ public class GameEditor : Game
 	{
 		spriteBatch = new(GraphicsDevice);
 		fontController = new(Content);
-	}
+    }
 
 	protected override void Update(GameTime gameTime)
 	{

@@ -1,9 +1,13 @@
 ﻿using Editor.Editor;
 using Editor.Engine;
+using Editor.GUI;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -11,6 +15,8 @@ namespace GUI.Editor;
 
 public partial class FormEditor : Form
 {
+    private static readonly AssetMonitor.AssetType[] dragDropTypes = new[] { AssetMonitor.AssetType.Model, AssetMonitor.AssetType.Texture, AssetMonitor.AssetType.Effect };
+
     public GameEditor GameEditor
     {
         get => gameEditor;
@@ -78,6 +84,8 @@ public partial class FormEditor : Form
         Text = "Our Cool Editor - " + GameEditor.Project.Name;
         GameEditor.AdjustAspectRatio();
         saveToolStripMenuItem_Click(sender, e);
+
+        UpdateAssets();
     }
 
     private void saveToolStripMenuItem_Click(object sender, EventArgs e)
@@ -120,14 +128,64 @@ public partial class FormEditor : Form
         Invoke(delegate
         {
             assetListBox.Items.Clear();
-            var assets = GameEditor.Project.AssetMonitor.Assets;
-            if (!assets.ContainsKey(AssetMonitor.AssetTypes.Model)) return;
 
-            foreach (string asset in assets[AssetMonitor.AssetTypes.Model])
+            foreach (var assetType in Enum.GetValues<AssetMonitor.AssetType>())
             {
-                assetListBox.Items.Add(asset);
+                assetListBox.Items.Add(assetType.ToString().ToUpper() + "S:");
+
+                foreach (string assetName in GameEditor.Project.AssetMonitor[assetType])
+                {
+                    assetListBox.Items.Add(new AssetListItem(assetName, assetType));
+                }
+
+                assetListBox.Items.Add("");
             }
         });
-    } 
+    }
+
+    private void assetListBox_MouseDown(object sender, MouseEventArgs e)
+    {
+        if (assetListBox.Items.Count == 0 || assetListBox.SelectedIndex == -1) return;
+
+        if (assetListBox.SelectedItem is not AssetListItem assetListItem) return;
+
+        if (!dragDropTypes.Contains(assetListItem.Type)) return;
+
+        DoDragDrop(assetListItem, DragDropEffects.Copy);
+    }
+
+    private void splitContainer_Panel1_DragOver(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(AssetListItem)) is not AssetListItem draggedAsset) return;
+
+        e.Effect = dragDropTypes.Contains(draggedAsset.Type) ? DragDropEffects.Copy : DragDropEffects.None;
+    }
+
+    private void splitContainer_Panel1_DragDrop(object sender, DragEventArgs e)
+    {
+        if (e.Data.GetData(typeof(AssetListItem)) is not AssetListItem draggedAsset) return;
+
+        switch (draggedAsset.Type)
+        {
+            case AssetMonitor.AssetType.Model:
+                ModelRenderer newModel = new(GameEditor.Content, draggedAsset.Name, "DefaultTexture", "MyEffect", Vector3.Zero, 1f);
+                GameEditor.Project.CurrentLevel.AddModel(newModel);
+                break;
+            case AssetMonitor.AssetType.Texture:
+                foreach (var material in GameEditor.Project.CurrentLevel.GetMousePositionObjects(e.GetMousePosition()).OfType<IMaterial>())
+                {
+                    material.Texture = GameEditor.Content.Load<Texture2D>(draggedAsset.Name);
+                    material.Texture.Tag = draggedAsset.Name;
+                }
+                break;
+            case AssetMonitor.AssetType.Effect:
+                foreach (var material in GameEditor.Project.CurrentLevel.GetMousePositionObjects(e.GetMousePosition()).OfType<IMaterial>())
+                {
+                    material.Effect = GameEditor.Content.Load<Effect>(draggedAsset.Name);
+                    material.Effect.Tag = draggedAsset.Name;
+                }
+                break;
+        }
+    }
     #endregion
 }

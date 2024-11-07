@@ -1,29 +1,36 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
-namespace Editor.Editor;
+namespace Editor.GUI;
 
 internal class AssetMonitor
 {
-    internal enum AssetTypes
+    internal enum AssetType
     {
         Model,
         Texture,
+        Effect,
         Font,
-        Audio,
-        Effect
+        Audio
     }
+
+    private static readonly Dictionary<string, AssetType> processorStringToAssetType = new() { ["\"ModelProcessor\""] = AssetType.Model, ["\"TextureProcessor\""] = AssetType.Texture, ["\"SongProcessor\""] = AssetType.Audio, ["\"SoundEffectProcessor\""] = AssetType.Audio, ["\"EffectProcessor\""] = AssetType.Effect };
 
     public event Action OnAssetsUpdated;
 
-    public Dictionary<AssetTypes, List<string>> Assets { get; private set; } = new();
-
+    public List<string> this[AssetType assetType] => assets[assetType];
+       
+    private readonly Dictionary<AssetType, List<string>> assets = new();
     private readonly FileSystemWatcher watcher;
     private readonly string metaInfo = string.Empty;
 
     internal AssetMonitor(string objectPath)
     {
+        foreach (var assetType in Enum.GetValues<AssetType>()) assets.Add(assetType, new());
+
         watcher = new FileSystemWatcher(objectPath);
         watcher.Created += Create;
         watcher.Changed += Change;
@@ -32,6 +39,8 @@ internal class AssetMonitor
         watcher.IncludeSubdirectories = false;
         watcher.EnableRaisingEvents = true;
         metaInfo = Path.Combine(objectPath, ".mgstats");
+
+        UpdateAssetDatabase();
     }
 
     private void Create(object sender, FileSystemEventArgs e)
@@ -46,10 +55,13 @@ internal class AssetMonitor
 
     private void Delete(object sender, FileSystemEventArgs e)
     {
-        if (Assets.Count == 0) return;
-
-        Assets.Clear();
+        ClearAssets();
         OnAssetsUpdated?.Invoke();
+    }
+
+    private void ClearAssets()
+    {
+        foreach (var assetType in Enum.GetValues<AssetType>()) assets[assetType].Clear();
     }
 
     private void UpdateAssetDatabase()
@@ -63,17 +75,22 @@ internal class AssetMonitor
             if (string.IsNullOrEmpty(line)) continue;
 
             string[] fields = line.Split(',');
-            if (fields[0] == "Source File" || fields[2] != "\"ModelProcessor\"") continue;
+            if (fields[0] == "Source File") continue;
 
-            if (!Assets.ContainsKey(AssetTypes.Model)) Assets.Add(AssetTypes.Model, new());
-
+            Debug.Assert(processorStringToAssetType.TryGetValue(fields[2], out AssetType assetType), "Unhandled processor.");
             string assetName = Path.GetFileNameWithoutExtension(fields[1]);
-            if (Assets[AssetTypes.Model].Contains(assetName)) continue;
-
-            Assets[AssetTypes.Model].Add(assetName);
-            hasChanged = true;
+            if (AddAsset(assetType, assetName)) hasChanged = true;
         }
 
         if (hasChanged) OnAssetsUpdated?.Invoke();
+    }
+
+    private bool AddAsset(AssetType assetType, string assetName)
+    {
+        if (assets[assetType].Contains(assetName)) return false;
+
+        assets[assetType].Add(assetName);
+
+        return true;
     }
 }

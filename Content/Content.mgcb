@@ -34,6 +34,24 @@
 /processorParam:TextureFormat=Compressed
 /build:Arial20.spritefont
 
+#begin DefaultEffect.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:DefaultEffect.fx
+
+#begin DefaultTexture.jpg
+/importer:TextureImporter
+/processor:TextureProcessor
+/processorParam:ColorKeyColor=255,0,255,255
+/processorParam:ColorKeyEnabled=True
+/processorParam:GenerateMipmaps=False
+/processorParam:PremultiplyAlpha=True
+/processorParam:ResizeToPowerOfTwo=False
+/processorParam:MakeSquare=False
+/processorParam:TextureFormat=Color
+/build:DefaultTexture.jpg
+
 #begin Fighter.fbx
 /importer:FbxImporter
 /processor:ModelProcessor
@@ -89,11 +107,11 @@
 /processorParam:TextureFormat=Color
 /build:Metal.jpg
 
-#begin MyShader.fx
+#begin MyEffect.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:MyShader.fx
+/build:MyEffect.fx
 
 #begin Teapot.fbx
 /importer:FbxImporter

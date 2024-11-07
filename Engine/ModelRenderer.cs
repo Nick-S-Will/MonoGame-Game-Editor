@@ -5,15 +5,17 @@ using Microsoft.Xna.Framework.Content;
 
 namespace Editor.Engine;
 
-internal class ModelRenderer : ISerializable, ISelectable
+internal class ModelRenderer : IRenderable, ISerializable
 {
 	public Model Model { get; set; }
-	public Texture Texture { get; set; }
+	public Texture2D Texture { get; set; }
 	public Effect Effect
 	{
 		get => effect;
 		set
 		{
+			if (effect == value) return;
+
 			effect = value;
 			foreach (var mesh in Model.Meshes)
 			{
@@ -42,7 +44,7 @@ internal class ModelRenderer : ISerializable, ISelectable
 	{
 		Model = contentManager.Load<Model>(modelName);
 		Model.Tag = modelName;
-		Texture = contentManager.Load<Texture>(textureName);
+		Texture = contentManager.Load<Texture2D>(textureName);
 		Texture.Tag = textureName;
 		Effect = contentManager.Load<Effect>(effectName);
 		Effect.Tag = effectName;
@@ -50,16 +52,12 @@ internal class ModelRenderer : ISerializable, ISelectable
 		Scale = scale;
 	}
 
-    public void Render(Matrix view, Matrix projection)
-	{
-		Effect.Parameters["WorldViewProjection"].SetValue(((ISelectable)this).Transform * view * projection);
-		Effect.Parameters["Texture"].SetValue(Texture);
-		Effect.Parameters["Tint"].SetValue(new Vector3(Tint.R / 255f, Tint.G / 255f, Tint.B / 255f));
+    public void Render()
+    {
+        foreach (ModelMesh modelMesh in Model.Meshes) modelMesh.Draw();
+    }
 
-		foreach (var mesh in Model.Meshes) mesh.Draw();
-	}
-
-	public void Serialize(BinaryWriter binaryWriter)
+    public void Serialize(BinaryWriter binaryWriter)
 	{
 		binaryWriter.Write(Model.Tag.ToString());
 		binaryWriter.Write(Texture.Tag.ToString());

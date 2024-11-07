@@ -3,10 +3,11 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Editor.Engine;
 
-internal class Terrain : ISelectable
+internal class Terrain : IRenderable
 {
     public GraphicsDevice GraphicsDevice { get; set; }
     public Texture2D Texture { get; set; }
+    public Effect Effect { get; set; }
     public Texture2D HeightMap
     {
         get => heightMap;
@@ -43,10 +44,11 @@ internal class Terrain : ISelectable
     private Texture2D heightMap;
     private float height;
 
-    public Terrain(GraphicsDevice graphicsDevice, Texture2D texture, Texture2D heightMap, float height)
+    public Terrain(GraphicsDevice graphicsDevice, Texture2D texture, Effect effect, Texture2D heightMap, float height)
     {
         GraphicsDevice = graphicsDevice;
         Texture = texture;
+        Effect = effect;
         this.heightMap = heightMap;
         this.height = height;
 
@@ -130,18 +132,12 @@ internal class Terrain : ISelectable
     } 
     #endregion
 
-    public void Draw(Effect effect, Matrix view, Matrix projection, Vector3 lightDirection)
+    public void Render()
     {
-        effect.Parameters["WorldViewProjection"].SetValue(((ISelectable)this).Transform * view * projection);
-        effect.Parameters["BaseTexture"].SetValue(Texture);
-        effect.Parameters["TextureTiling"].SetValue(15f);
-        effect.Parameters["LightDirection"].SetValue(lightDirection);
-        effect.Parameters["Tint"].SetValue(new Vector3(Tint.R / 255f, Tint.G / 255f, Tint.B / 255f));
-
         GraphicsDevice.SetVertexBuffer(VertexBuffer);
         GraphicsDevice.Indices = IndexBuffer;
 
-        foreach (var pass in effect.CurrentTechnique.Passes)
+        foreach (EffectPass pass in Effect.CurrentTechnique.Passes)
         {
             pass.Apply();
             GraphicsDevice.DrawIndexedPrimitives(PrimitiveType.TriangleList, 0, 0, Indices.Length / 3);
