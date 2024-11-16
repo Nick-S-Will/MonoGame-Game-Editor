@@ -1,4 +1,6 @@
-﻿namespace Editor.GUI;
+﻿using Editor.Editor;
+
+namespace Editor.GUI;
 
 internal class AssetListItem
 {

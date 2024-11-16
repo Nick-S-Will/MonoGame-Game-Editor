@@ -1,6 +1,9 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Editor.Extensions;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -11,8 +14,12 @@ namespace Editor.Engine;
 
 internal class Level : ISerializable
 {
+    public event Action<ISelectable> OnSelect;
+
     public Camera Camera => camera;
-    public ISelectable[] SelectedObjects => selectedObjects.ToArray();
+    public virtual IEnumerable<ModelRenderer> ModelRenderers => modelRenderers;
+    public IEnumerable<ISelectable> SelectedObjects => selectedObjects;
+    public Color SelectionColor { get; set; } = Color.Red;
 
     private readonly Light light = new() { Position = new(0, 400, -500), Color = new(.9f, .9f, .9f) };
     private readonly Camera camera = new(new Vector3(20f, 290f, 600f), 16f / 9f);
@@ -20,17 +27,22 @@ internal class Level : ISerializable
     private readonly List<ModelRenderer> modelRenderers = new();
     private Terrain terrain;
 
+    public Level()
+    {
+        OnSelect += PlaySelectSound;
+    }
+
     public void LoadContent(ContentManager contentManager, GraphicsDevice graphicsDevice)
     {
         Renderer.Instance.Camera = camera;
         Renderer.Instance.Light = light;
 
-        terrain = new(graphicsDevice, contentManager.Load<Texture2D>("Grass"), contentManager.Load<Effect>("TerrainEffect"), contentManager.Load<Texture2D>("HeightMap"), 200f);
+        //terrain = new(graphicsDevice, contentManager.Load<Texture2D>("Grass"), contentManager.Load<Effect>("TerrainEffect"), contentManager.Load<Texture2D>("HeightMap"), 200f);
     }
 
-    public void AddModel(ModelRenderer teapot)
+    public void AddModel(ModelRenderer modelRenderer)
     {
-        modelRenderers.Add(teapot);
+        modelRenderers.Add(modelRenderer);
     }
 
     public void Update(float delta)
@@ -42,6 +54,7 @@ internal class Level : ISerializable
         HandleSelection();
     }
 
+    #region Object Translation
     private void HandleTranslate(float delta)
     {
         Vector3 translation = Vector3.Zero;
@@ -85,7 +98,7 @@ internal class Level : ISerializable
 
         Vector3 eulerAngles = delta * new Vector3(deltaMousePosition.Y, deltaMousePosition.X, 0);
 
-        if (selectedObjects.Count == 0) camera.Rotate(eulerAngles);
+        if (selectedObjects.Count == 0) camera.Rotate(-eulerAngles);
         else
         {
             foreach (var obj in selectedObjects)
@@ -106,40 +119,64 @@ internal class Level : ISerializable
         {
             obj.Scale += scaler;
         }
-    }
+    } 
+    #endregion
 
+    #region Selection
     private void HandleSelection()
     {
         if (!InputController.IsMouseButtonDown(MouseButtons.Left)) return;
 
-        selectedObjects.Clear();
-        foreach (var renderer in modelRenderers) renderer.Tint = Color.Black;
-        terrain.Tint = Color.Black;
+        ClearSelectedObjects();
 
-        Color selectionColor = Color.Red;
-        foreach (var selectable in GetMousePositionObjects(InputController.MousePosition))
-        {
-            selectable.Tint = selectionColor;
-            selectedObjects.Add(selectable);
-        }
+        foreach (var selectable in GetObjects(InputController.MousePosition)) SelectObject(selectable);
     }
 
-    public ISelectable[] GetMousePositionObjects(Vector2 mousePosition)
+    public void ClearSelectedObjects()
+    {
+        selectedObjects.Clear();
+        foreach (var renderer in modelRenderers) renderer.Tint = Color.Black;
+        if (terrain != null) terrain.Tint = Color.Black;
+    }
+
+    public void SelectObject(ISelectable selectable)
+    {
+        selectable.Tint = SelectionColor;
+        selectedObjects.Add(selectable);
+
+        OnSelect.Invoke(selectable);
+    }
+
+    public ISelectable[] GetObjects(Vector2 screenPosition)
     {
         List<ISelectable> selectables = new();
 
-        Ray mousePositionRay = camera.GetRayFromScreenPosition(mousePosition);
+        Ray mousePositionRay = camera.GetRayFromScreenPosition(screenPosition);
         foreach (var modelRenderer in modelRenderers)
         {
             bool intersectingModel = mousePositionRay.IntersectsModelRenderer(modelRenderer).HasValue;
             if (intersectingModel) selectables.Add(modelRenderer);
         }
 
-        bool intersectingTerrain = mousePositionRay.IntersectsTerrain(terrain).HasValue;
-        if (intersectingTerrain) selectables.Add(terrain);
+        if (terrain != null)
+        {
+            bool intersectingTerrain = mousePositionRay.IntersectsTerrain(terrain).HasValue;
+            if (intersectingTerrain) selectables.Add(terrain);
+        }
 
         return selectables.ToArray();
     }
+    #endregion
+
+    #region Audio
+    private void PlaySelectSound(ISelectable selectable)
+    {
+        if (selectable is not ISoundEmitter soundEmitter) return;
+        if (!soundEmitter.SoundEffects.TryGetValue(ISoundEmitter.Sound.Select, out var sound)) return;
+
+        if (sound.Value.State == SoundState.Stopped) sound.Value.Play();
+    }
+    #endregion
 
     public void Render()
     {
@@ -148,7 +185,7 @@ internal class Level : ISerializable
             Renderer.Instance.Render(renderer);
         }
 
-        Renderer.Instance.Render(terrain);
+        if (terrain != null) Renderer.Instance.Render(terrain);
     }
 
     public void Serialize(BinaryWriter binaryWriter)

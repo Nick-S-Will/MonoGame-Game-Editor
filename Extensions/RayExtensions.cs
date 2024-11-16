@@ -1,8 +1,9 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Editor.Engine;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System.Linq;
 
-namespace Editor.Engine;
+namespace Editor.Extensions;
 
 internal static class RayExtensions
 {

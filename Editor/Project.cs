@@ -14,15 +14,16 @@ internal class Project : ISerializable
 
 	public event Action OnAssetsUpdated;
 
+	public AssetMonitor AssetMonitor { get; private set; }
 	public Level CurrentLevel { get; private set; }
-	public List<Level> Levels { get; private set; } = new();
 	public string Folder { get; private set; } = string.Empty;
 	public string Name { get; private set; } = string.Empty;
-	public AssetMonitor AssetMonitor { get; private set; }
 	public string ContentFolder => string.IsNullOrEmpty(Folder) ? string.Empty : Path.Combine(Folder, "Content");
     public string AssetFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "bin");
     public string ObjectFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "obj");
 	public string ContentPath => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "Content.mgcb");
+
+	private readonly List<Level> levels = new();
 
     public Project() { }
 
@@ -35,7 +36,7 @@ internal class Project : ISerializable
     {
         CurrentLevel = new();
         CurrentLevel.LoadContent(contentManager, graphicsDevice);
-        Levels.Add(CurrentLevel);
+        levels.Add(CurrentLevel);
     }
 
     public void SetPath(string path)
@@ -72,26 +73,29 @@ internal class Project : ISerializable
 
 	public void Serialize(BinaryWriter binaryWriter)
 	{
-		binaryWriter.Write(Levels.Count);
-		int levelIndex = Levels.IndexOf(CurrentLevel);
-        foreach (var level in Levels) level.Serialize(binaryWriter);
-		binaryWriter.Write(levelIndex);
 		binaryWriter.Write(Folder);
 		binaryWriter.Write(Name);
+		binaryWriter.Write(levels.Count);
+        foreach (var level in levels) level.Serialize(binaryWriter);
+		int levelIndex = levels.IndexOf(CurrentLevel);
+		binaryWriter.Write(levelIndex);
     }
 
 	public void Deserialize(BinaryReader binaryReader, ContentManager contentManager)
 	{
-		int levelCount = binaryReader.ReadInt32();
+		Folder = binaryReader.ReadString();
+		Name = binaryReader.ReadString();
+		SetPath(Path.Combine(Folder, Name));
+		contentManager.RootDirectory = Folder + @"\Content\bin";
+
+        int levelCount = binaryReader.ReadInt32();
         for (int i = 0; i < levelCount; i++)
         {
 			Level level = new();
 			level.Deserialize(binaryReader, contentManager);
-			Levels.Add(level);
+			levels.Add(level);
 		}
 		int levelIndex = binaryReader.ReadInt32();
-		CurrentLevel = Levels[levelIndex];
-		Folder = binaryReader.ReadString();
-		Name = binaryReader.ReadString();
-	}
+		CurrentLevel = levels[levelIndex];
+    }
 }

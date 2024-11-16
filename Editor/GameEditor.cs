@@ -1,4 +1,5 @@
 ﻿using Editor.Engine;
+using Editor.GUI;
 using GUI.Editor;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -44,7 +45,7 @@ public class GameEditor : Game
 		gameForm.TopLevel = false;
 		gameForm.Dock = DockStyle.Fill;
 		gameForm.FormBorderStyle = FormBorderStyle.None;
-		this.parent.splitContainer.Panel1.Controls.Add(gameForm);
+		this.parent.GamePanel.Controls.Add(gameForm);
 	}
 
 	protected override void Initialize()
@@ -73,11 +74,18 @@ public class GameEditor : Game
 		Project.Update(deltaTime);
 		InputController.Clear();
 
-		var selectedObjects = Project.CurrentLevel.SelectedObjects;
-		if (!selectedObjects.SequenceEqual(parent.propertyGrid.SelectedObjects))
+		var selectedObjects = Project.CurrentLevel.SelectedObjects.ToArray();
+		if (!selectedObjects.SequenceEqual(parent.Inspector.SelectedObjects))
 		{
-			parent.propertyGrid.SelectedObjects = selectedObjects;
-		}
+			parent.Inspector.SelectedObjects = selectedObjects;
+
+			if (selectedObjects.Length == 1)
+			{
+				var selectedListItem = parent.Hierarchy.Items.Cast<LevelListItem>().First(listItem => listItem.Model == selectedObjects[0]);
+				parent.Hierarchy.SetSelected(parent.Hierarchy.Items.IndexOf(selectedListItem), true);
+			}
+			else parent.Hierarchy.SelectedIndex = -1;
+        }
 
 		base.Update(gameTime);
 	}
@@ -91,11 +99,9 @@ public class GameEditor : Game
 		spriteBatch.Begin();
 
 		string text = InputController.ToString();
-		Vector2 position = new(20f, 20f);
-		fontController.Draw(spriteBatch, FontController.Size.Large, text, position, Color.White);
+		fontController.Draw(spriteBatch, FontController.Size.Large, text, new(20f, 20f), Color.White);
 		text = Project.CurrentLevel.ToString();
-		position = new(20f, 80f);
-		fontController.Draw(spriteBatch, FontController.Size.Small, text, position, Color.Yellow);
+		fontController.Draw(spriteBatch, FontController.Size.Small, text, new(20f, 80f), Color.Yellow);
 
 		spriteBatch.End();
 

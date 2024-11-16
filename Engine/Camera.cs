@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using Editor.Extensions;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -83,7 +84,7 @@ internal class Camera : ISerializable
 
     public void Deserialize(BinaryReader binaryReader, ContentManager contentManager)
     {
-        Position = Vector3Extensions.Deserialize(binaryReader);
+        Position = VectorExtensions.Deserialize(binaryReader);
         NearPlaneDistance = binaryReader.ReadSingle();
         FarPlaneDistance = binaryReader.ReadSingle();
         AspectRatio = binaryReader.ReadSingle();

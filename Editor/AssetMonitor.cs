@@ -2,9 +2,8 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
-namespace Editor.GUI;
+namespace Editor.Editor;
 
 internal class AssetMonitor
 {
@@ -14,10 +13,10 @@ internal class AssetMonitor
         Texture,
         Effect,
         Font,
-        Audio
+        Sound
     }
 
-    private static readonly Dictionary<string, AssetType> processorStringToAssetType = new() { ["\"ModelProcessor\""] = AssetType.Model, ["\"TextureProcessor\""] = AssetType.Texture, ["\"SongProcessor\""] = AssetType.Audio, ["\"SoundEffectProcessor\""] = AssetType.Audio, ["\"EffectProcessor\""] = AssetType.Effect };
+    private static readonly Dictionary<string, AssetType> processorStringToAssetType = new() { ["\"ModelProcessor\""] = AssetType.Model, ["\"TextureProcessor\""] = AssetType.Texture, ["\"SongProcessor\""] = AssetType.Sound, ["\"SoundEffectProcessor\""] = AssetType.Sound, ["\"EffectProcessor\""] = AssetType.Effect };
 
     public event Action OnAssetsUpdated;
 
