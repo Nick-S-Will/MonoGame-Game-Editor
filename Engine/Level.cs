@@ -6,7 +6,6 @@ using Microsoft.Xna.Framework.Graphics;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 
@@ -16,7 +15,9 @@ internal class Level : ISerializable
 {
     public event Action<ISelectable> OnSelect;
 
+    public Light Light => light;
     public Camera Camera => camera;
+    public Terrain Terrain => terrain;
     public virtual IEnumerable<ModelRenderer> ModelRenderers => modelRenderers;
     public IEnumerable<ISelectable> SelectedObjects => selectedObjects;
     public Color SelectionColor { get; set; } = Color.Red;
@@ -32,12 +33,14 @@ internal class Level : ISerializable
         OnSelect += PlaySelectSound;
     }
 
+    public Light GetLight() => light;
+
     public void LoadContent(ContentManager contentManager, GraphicsDevice graphicsDevice)
     {
         Renderer.Instance.Camera = camera;
         Renderer.Instance.Light = light;
 
-        //terrain = new(graphicsDevice, contentManager.Load<Texture2D>("Grass"), contentManager.Load<Effect>("TerrainEffect"), contentManager.Load<Texture2D>("HeightMap"), 200f);
+        terrain = new(graphicsDevice, contentManager.Load<Texture2D>("Grass"), contentManager.Load<Effect>("TerrainEffect"), contentManager.Load<Texture2D>("HeightMap"), 200f);
     }
 
     public void AddModel(ModelRenderer modelRenderer)

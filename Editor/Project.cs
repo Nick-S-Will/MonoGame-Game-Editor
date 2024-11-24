@@ -1,5 +1,6 @@
-﻿using Editor.Engine;
-using Editor.GUI;
+﻿using Editor.Editor.Scripting;
+using Editor.Engine;
+using Editor.Engine.Scripting;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using System;
@@ -10,18 +11,26 @@ namespace Editor.Editor;
 
 internal class Project : ISerializable
 {
-	private const string FileExtension = ".oce";
+	public const string FileExtension = ".oce";
+	public const string BeforeUpdateScriptFileName = "BeforeUpdate.lua";
+	public const string AfterUpdateScriptFileName = "AfterUpdate.lua";
+	public const string BeforeRenderScriptFileName = "BeforeRender.lua";
+	public const string AfterRenderScriptFileName = "AfterRender.lua";
+
+    private static readonly string[] baseScriptFileNames = { BeforeUpdateScriptFileName, AfterUpdateScriptFileName, BeforeRenderScriptFileName, AfterRenderScriptFileName };
 
 	public event Action OnAssetsUpdated;
 
 	public AssetMonitor AssetMonitor { get; private set; }
+	public ScriptMonitor ScriptMonitor { get; private set; }
 	public Level CurrentLevel { get; private set; }
 	public string Folder { get; private set; } = string.Empty;
 	public string Name { get; private set; } = string.Empty;
 	public string ContentFolder => string.IsNullOrEmpty(Folder) ? string.Empty : Path.Combine(Folder, "Content");
-    public string AssetFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "bin");
-    public string ObjectFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "obj");
 	public string ContentPath => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "Content.mgcb");
+    public string ObjectFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "obj");
+    public string AssetFolder => string.IsNullOrEmpty(ContentFolder) ? string.Empty : Path.Combine(ContentFolder, "bin");
+	public string ScriptFolder => string.IsNullOrEmpty(Folder) ? string.Empty : Path.Combine(Folder, "Scripts");
 
 	private readonly List<Level> levels = new();
 
@@ -52,8 +61,46 @@ internal class Project : ISerializable
 			Directory.CreateDirectory(ObjectFolder);
 			File.Copy("ContentTemplate.mgcb", ContentPath);
 		}
+
+		if (!Directory.Exists(ScriptFolder))
+		{
+			Directory.CreateDirectory(ScriptFolder);
+		}
+		foreach (var scriptFileName in baseScriptFileNames)
+		{
+			CreateScriptFile(Path.Combine(ScriptFolder, scriptFileName));
+		}
+
 		AssetMonitor = new(ObjectFolder);
         AssetMonitor.OnAssetsUpdated += UpdateAssets;
+
+		ScriptMonitor = new(ScriptFolder);
+		ScriptMonitor.OnScriptUpdated += UpdateScript;
+
+		ConfigureScripts();
+	}
+
+    private static void CreateScriptFile(string filePath)
+    {
+		if (File.Exists(filePath)) return;
+
+		string functionName = Path.GetFileNameWithoutExtension(filePath);
+		File.Create(filePath).Close();
+		File.AppendAllLines(filePath, new string[] { "function " + functionName + "Main()", "end" });
+    }
+
+	private static void UpdateScript(string scriptPath)
+	{
+		ScriptManager.Instance.LoadScriptFile(scriptPath);
+	}
+
+	public void ConfigureScripts()
+	{
+        ScriptManager.Instance.LoadSharedObjects(this);
+        foreach (var scriptFileName in baseScriptFileNames)
+        {
+            ScriptManager.Instance.LoadScriptFile(Path.Combine(ScriptFolder, scriptFileName));
+        }
 	}
 
     private void UpdateAssets()

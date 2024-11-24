@@ -41,6 +41,8 @@ internal class Terrain : IRenderable
     public float Scale { get; set; } = 1f;
     public Color Tint { get; set; } = Color.Black;
 
+    public void SetTint(int r, int g, int b) { Tint = new Color(r, g, b); }
+
     private Texture2D heightMap;
     private float height;
 

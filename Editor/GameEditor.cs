@@ -1,9 +1,11 @@
 ﻿using Editor.Engine;
+using Editor.Engine.Scripting;
 using Editor.GUI;
 using GUI.Editor;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using System;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 
@@ -70,40 +72,50 @@ public class GameEditor : Game
 	{
         Content.RootDirectory = Project.AssetFolder;
 
+		ScriptManager.Instance.Execute(Path.GetFileNameWithoutExtension(Project.BeforeUpdateScriptFileName) + "Main");
+
         float deltaTime = (float)gameTime.ElapsedGameTime.TotalSeconds;
 		Project.Update(deltaTime);
+		UpdateSelected();
 		InputController.Clear();
+		
+        ScriptManager.Instance.Execute(Path.GetFileNameWithoutExtension(Project.AfterUpdateScriptFileName) + "Main");
 
-		var selectedObjects = Project.CurrentLevel.SelectedObjects.ToArray();
-		if (!selectedObjects.SequenceEqual(parent.Inspector.SelectedObjects))
-		{
-			parent.Inspector.SelectedObjects = selectedObjects;
-
-			if (selectedObjects.Length == 1)
-			{
-				var selectedListItem = parent.Hierarchy.Items.Cast<LevelListItem>().First(listItem => listItem.Model == selectedObjects[0]);
-				parent.Hierarchy.SetSelected(parent.Hierarchy.Items.IndexOf(selectedListItem), true);
-			}
-			else parent.Hierarchy.SelectedIndex = -1;
-        }
-
-		base.Update(gameTime);
+        base.Update(gameTime);
 	}
+
+	private void UpdateSelected()
+	{
+        var selectedObjects = Project.CurrentLevel.SelectedObjects.OfType<ModelRenderer>().ToArray();
+        if (!selectedObjects.SequenceEqual(parent.Inspector.SelectedObjects))
+        {
+            parent.Inspector.SelectedObjects = selectedObjects;
+
+            if (selectedObjects.Length == 1)
+            {
+                var selectedListItem = parent.Hierarchy.Items.Cast<LevelListItem>().First(listItem => listItem.Model == selectedObjects[0]);
+                parent.Hierarchy.SetSelected(parent.Hierarchy.Items.IndexOf(selectedListItem), true);
+            }
+            else parent.Hierarchy.SelectedIndex = -1;
+        }
+    }
 
 	protected override void Draw(GameTime gameTime)
 	{
 		GraphicsDevice.Clear(Color.CornflowerBlue);
 
+		ScriptManager.Instance.Execute(Path.GetFileNameWithoutExtension(Project.BeforeRenderScriptFileName) + "Main");
+
 		Project.Render();
 
 		spriteBatch.Begin();
-
 		string text = InputController.ToString();
 		fontController.Draw(spriteBatch, FontController.Size.Large, text, new(20f, 20f), Color.White);
 		text = Project.CurrentLevel.ToString();
 		fontController.Draw(spriteBatch, FontController.Size.Small, text, new(20f, 80f), Color.Yellow);
-
 		spriteBatch.End();
+
+		ScriptManager.Instance.Execute(Path.GetFileNameWithoutExtension(Project.AfterRenderScriptFileName) + "Main");
 
 		base.Draw(gameTime);
 	}
